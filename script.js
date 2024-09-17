@@ -1,34 +1,38 @@
 // script.js
+
+// 真理値表を生成する関数
 function generateTruthTable() {
-    const numElements = document.getElementById('numElements').value;
-    const combinations = generateCombinations(numElements);
-    renderTable(combinations, numElements);
+    const numElements = document.getElementById('numElements').value; // 要素数を取得
+    const combinations = generateCombinations(numElements); // 真理値表の組み合わせを生成
+    renderTable(combinations, numElements); // テーブルを描画
 }
 
+// 真理値表の組み合わせを生成する関数
 function generateCombinations(numElements) {
     const combinations = [];
-    const rows = Math.pow(2, numElements);
+    const rows = Math.pow(2, numElements); // 行数は2の要素数乗
     for (let i = 0; i < rows; i++) {
         const combination = [];
         for (let j = numElements - 1; j >= 0; j--) {
-            combination.push((i & (1 << j)) ? '1' : '0');
+            combination.push((i & (1 << j)) ? '1' : '0'); // 各ビットをチェックして0または1を追加
         }
         combinations.push(combination);
     }
     return combinations;
 }
 
+// テーブルを描画する関数
 function renderTable(combinations, numElements) {
     const tableHeader = document.getElementById('tableHeader');
     const tableBody = document.getElementById('tableBody');
-    tableHeader.innerHTML = '<th>Index</th>';
+    tableHeader.innerHTML = '<th>Index</th>'; // インデックス列のヘッダー
     tableBody.innerHTML = '';
 
-    // ヘッダーの作成
+    // 各要素のヘッダーを作成
     for (let i = 0; i < numElements; i++) {
         const th = document.createElement('th');
         th.textContent = `Element ${i + 1}`;
-        th.setAttribute('onclick', `sortTable(${i + 1})`);
+        th.setAttribute('onclick', `sortTable(${i + 1})`); // ソート機能を追加
         tableHeader.appendChild(th);
     }
 
@@ -37,70 +41,74 @@ function renderTable(combinations, numElements) {
     extraTh.textContent = 'result value';
     tableHeader.appendChild(extraTh);
 
-    // 行の作成
+    // 各行を作成
     combinations.forEach((combination, index) => {
         const tr = document.createElement('tr');
         const indexTd = document.createElement('td');
-        indexTd.textContent = index;
+        indexTd.textContent = index; // インデックスを設定
         tr.appendChild(indexTd);
         combination.forEach(value => {
             const td = document.createElement('td');
             td.textContent = value;
-            td.setAttribute('contenteditable', 'true');
+            td.setAttribute('contenteditable', 'true'); // 編集可能に設定
             tr.appendChild(td);
         });
         // 追加列のセル
         const extraTd = document.createElement('td');
-        extraTd.textContent = 'x';
+        extraTd.textContent = 'x'; // 初期値を 'x' に設定
         extraTd.setAttribute('contenteditable', 'true');
-        extraTd.addEventListener('input', handleInput);
+        extraTd.addEventListener('input', handleInput); // 入力制限を追加
         tr.appendChild(extraTd);
 
         tableBody.appendChild(tr);
     });
 }
 
+// 入力制限を処理する関数
 function handleInput(event) {
     const validKeys = ['0', '1', 'x'];
     const inputValue = event.target.textContent;
     if (!validKeys.includes(inputValue)) {
-        event.target.textContent = 'x';
+        event.target.textContent = 'x'; // 無効な入力は 'x' にリセット
     }
 }
 
+// テーブルをソートする関数
 function sortTable(columnIndex) {
     const table = document.getElementById('truthTable');
-    const rows = Array.from(table.rows).slice(1);
+    const rows = Array.from(table.rows).slice(1); // ヘッダーを除く行を取得
     const tbody = table.tBodies[0];
     const sortedRows = rows.sort((a, b) => {
         const cellA = a.cells[columnIndex].textContent;
         const cellB = b.cells[columnIndex].textContent;
-        return cellA.localeCompare(cellB);
+        return cellA.localeCompare(cellB); // 文字列として比較
     });
-    sortedRows.forEach(row => tbody.appendChild(row));
+    sortedRows.forEach(row => tbody.appendChild(row)); // ソートされた行を再配置
 }
 
+// 数式を生成する関数
 function generateFormula() {
     const table = document.getElementById('truthTable');
-    const rows = Array.from(table.rows).slice(1);
+    const rows = Array.from(table.rows).slice(1); // ヘッダーを除く行を取得
     const numElements = document.getElementById('numElements').value;
     let formula = '';
 
     rows.forEach(row => {
         const cells = Array.from(row.cells);
-        const resultValue = cells.pop().textContent;
+        const resultValue = cells.pop().textContent; // result value 列を取得
         if (resultValue === '1') {
             let term = '';
             cells.slice(1).forEach((cell, index) => { // Index列を除外
                 const cellValue = cell.textContent;
-                term += (cellValue === '1') ? `A${index}` : `!A${index}`;
+                term += (cellValue === '1') ? `A${index}` : `!A${index}`; // 入力に基づいて項を生成
             });
             formula += `(${term}) + `;
         }
     });
 
     formula = formula.slice(0, -3); // 最後の " + " を削除
-    document.getElementById('formula').textContent = formula;
+    document.getElementById('formula').textContent = formula; // 数式を表示
 }
 
+// ページ読み込み時に真理値表を生成
 document.addEventListener('DOMContentLoaded', generateTruthTable);
