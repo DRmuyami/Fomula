@@ -85,21 +85,22 @@
                 tdValue.textContent = row.value;
                 tdValue.classList.add('editable');
                 tdValue.setAttribute('contenteditable', 'true');
-                tdValue.addEventListener('input', (e) => handleInput(e, rowIndex, tdValue));
+                tdValue.addEventListener('focus', () => tdValue.textContent = '');
+                tdValue.addEventListener('beforeinput', (e) => handleBeforeInput(e, rowIndex, tdValue));
                 tr.appendChild(tdElement);
                 tr.appendChild(tdValue);
                 tbody.appendChild(tr);
             });
         }
 
-        function handleInput(event, rowIndex, cell) {
+        function handleBeforeInput(event, rowIndex, cell) {
             const validKeys = ['0', '1', 'x'];
-            const inputValue = event.target.textContent;
+            const inputValue = event.data;
             if (validKeys.includes(inputValue)) {
                 truthTable[rowIndex].value = inputValue;
+                //cell.textContent = inputValue;
             } else {
-                truthTable[rowIndex].value = 'x';
-                cell.textContent = 'x';
+                event.preventDefault();
             }
         }
 
