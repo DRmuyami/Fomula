@@ -34,7 +34,7 @@ function renderTable(combinations, numElements) {
 
     // 追加列のヘッダー
     const extraTh = document.createElement('th');
-    extraTh.textContent = 'Extra';
+    extraTh.textContent = 'result value';
     tableHeader.appendChild(extraTh);
 
     // 行の作成
@@ -78,6 +78,29 @@ function sortTable(columnIndex) {
         return cellA.localeCompare(cellB);
     });
     sortedRows.forEach(row => tbody.appendChild(row));
+}
+
+function generateFormula() {
+    const table = document.getElementById('truthTable');
+    const rows = Array.from(table.rows).slice(1);
+    const numElements = document.getElementById('numElements').value;
+    let formula = '';
+
+    rows.forEach(row => {
+        const cells = Array.from(row.cells);
+        const resultValue = cells.pop().textContent;
+        if (resultValue === '1') {
+            let term = '';
+            cells.forEach((cell, index) => {
+                const cellValue = cell.textContent;
+                term += (cellValue === '1') ? `A${index}` : `!A${index}`;
+            });
+            formula += `(${term}) + `;
+        }
+    });
+
+    formula = formula.slice(0, -3); // 最後の " + " を削除
+    document.getElementById('formula').textContent = formula;
 }
 
 document.addEventListener('DOMContentLoaded', generateTruthTable);
