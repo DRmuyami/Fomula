@@ -1,0 +1,14 @@
+/* styles.css */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td {
+    border: 1px solid #000;
+    padding: 8px;
+    text-align: center;
+    cursor: pointer;
+}
+th {
+    background-color: #f2f2f2;
+}

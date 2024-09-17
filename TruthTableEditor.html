@@ -121,13 +121,23 @@
         }
 
         function addColumn() {
-            // 列の追加ロジックをここに追加
-            alert('Add Column functionality is not implemented yet.');
+            const newElement = prompt("Enter the name of the new element:");
+            if (newElement) {
+                truthTable.forEach(row => {
+                    row[newElement] = 'x'; // 新しい列の初期値を 'x' に設定
+                });
+                renderTable();
+            }
         }
-
+        
         function deleteColumn() {
-            // 列の削除ロジックをここに追加
-            alert('Delete Column functionality is not implemented yet.');
+            const elementToDelete = prompt("Enter the name of the element to delete:");
+            if (elementToDelete) {
+                truthTable.forEach(row => {
+                    delete row[elementToDelete]; // 指定された列を削除
+                });
+                renderTable();
+            }
         }
 
         document.addEventListener('contextmenu', function(e) {
