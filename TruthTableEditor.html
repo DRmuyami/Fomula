@@ -33,6 +33,13 @@
         .context-menu ul li:hover {
             background-color: #eee;
         }
+        .editable {
+            cursor: pointer;
+        }
+        .editable:focus {
+            outline: none;
+            background-color: #eef;
+        }
     </style>
 </head>
 <body>
@@ -62,24 +69,38 @@
 
     <script>
         const truthTable = [
-            { element: 'A', value: true },
-            { element: 'B', value: false },
+            { element: 'A', value: '1' },
+            { element: 'B', value: '0' },
             // 他の要素を追加
         ];
 
         function renderTable() {
             const tbody = document.getElementById('truthTable').querySelector('tbody');
             tbody.innerHTML = '';
-            truthTable.forEach(row => {
+            truthTable.forEach((row, rowIndex) => {
                 const tr = document.createElement('tr');
                 const tdElement = document.createElement('td');
                 tdElement.textContent = row.element;
                 const tdValue = document.createElement('td');
                 tdValue.textContent = row.value;
+                tdValue.classList.add('editable');
+                tdValue.setAttribute('contenteditable', 'true');
+                tdValue.addEventListener('input', (e) => handleInput(e, rowIndex, tdValue));
                 tr.appendChild(tdElement);
                 tr.appendChild(tdValue);
                 tbody.appendChild(tr);
             });
+        }
+
+        function handleInput(event, rowIndex, cell) {
+            const validKeys = ['0', '1', 'x'];
+            const inputValue = event.target.textContent;
+            if (validKeys.includes(inputValue)) {
+                truthTable[rowIndex].value = inputValue;
+            } else {
+                truthTable[rowIndex].value = 'x';
+                cell.textContent = 'x';
+            }
         }
 
         function generateExpression() {
@@ -89,7 +110,7 @@
         }
 
         function addRow() {
-            truthTable.push({ element: 'New', value: false });
+            truthTable.push({ element: 'New', value: 'x' });
             renderTable();
         }
 
