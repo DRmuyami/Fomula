@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>真理値表エディタ</title>
+    <title>Truth Table Editor</title>
     <style>
         table {
             width: 100%;
@@ -14,23 +14,51 @@
             padding: 8px;
             text-align: center;
         }
+        .context-menu {
+            display: none;
+            position: absolute;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            z-index: 1000;
+        }
+        .context-menu ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .context-menu ul li {
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        .context-menu ul li:hover {
+            background-color: #eee;
+        }
     </style>
 </head>
 <body>
-    <h1>真理値表エディタ</h1>
+    <h1>Truth Table Editor</h1>
     <table id="truthTable">
         <thead>
             <tr>
-                <th>要素</th>
-                <th>値</th>
+                <th>Element</th>
+                <th>Value</th>
             </tr>
         </thead>
         <tbody>
             <!-- JavaScriptで行を追加 -->
         </tbody>
     </table>
-    <button onclick="generateExpression()">結果式を生成</button>
+    <button onclick="generateExpression()">Generate Expression</button>
     <div id="result"></div>
+
+    <div class="context-menu" id="contextMenu">
+        <ul>
+            <li onclick="addRow()">Add Row</li>
+            <li onclick="deleteRow()">Delete Row</li>
+            <li onclick="addColumn()">Add Column</li>
+            <li onclick="deleteColumn()">Delete Column</li>
+        </ul>
+    </div>
 
     <script>
         const truthTable = [
@@ -56,9 +84,41 @@
 
         function generateExpression() {
             // 論理式生成のロジックをここに追加
-            const result = '生成された論理式';
+            const result = 'Generated Expression';
             document.getElementById('result').textContent = result;
         }
+
+        function addRow() {
+            truthTable.push({ element: 'New', value: false });
+            renderTable();
+        }
+
+        function deleteRow() {
+            truthTable.pop();
+            renderTable();
+        }
+
+        function addColumn() {
+            // 列の追加ロジックをここに追加
+            alert('Add Column functionality is not implemented yet.');
+        }
+
+        function deleteColumn() {
+            // 列の削除ロジックをここに追加
+            alert('Delete Column functionality is not implemented yet.');
+        }
+
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            const contextMenu = document.getElementById('contextMenu');
+            contextMenu.style.top = `${e.pageY}px`;
+            contextMenu.style.left = `${e.pageX}px`;
+            contextMenu.style.display = 'block';
+        });
+
+        document.addEventListener('click', function() {
+            document.getElementById('contextMenu').style.display = 'none';
+        });
 
         renderTable();
     </script>
