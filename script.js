@@ -85,7 +85,6 @@ function sortTable(columnIndex) {
     });
     sortedRows.forEach(row => tbody.appendChild(row)); // ソートされた行を再配置
 }
-
 // ログを表示する関数
 function logMessage(message) {
     const logDiv = document.getElementById('log');
@@ -100,6 +99,91 @@ function createBitstateArray(numElements) {
     const bitstateArray = new Array(arraySize).fill(0);
     return bitstateArray;
 }
+
+// クワイン・マクラスキー法による論理式の簡略化
+//参考サイトhttps://shibaken-8128.hatenablog.com/entry/2021/12/01/110905
+function simplification(bitstateArray) {
+    logMessage('Original bitstate array: ' + bitstateArray.join(', ')); // デバッグ用ログ
+
+    // 最小項を抽出
+    const minterms = [];
+    bitstateArray.forEach((value, index) => {
+        if (value === 1) {
+            minterms.push(index.toString(2).padStart(bitstateArray.length.toString(2).length, '0'));
+        }
+    });
+    logMessage('Minterms: ' + JSON.stringify(minterms)); // デバッグ用ログ
+
+    // 最小項をグループ化
+    const groups = {};
+    minterms.forEach(minterm => {
+        const onesCount = minterm.split('1').length - 1;
+        if (!groups[onesCount]) groups[onesCount] = [];
+        groups[onesCount].push(minterm);
+    });
+    logMessage('Grouped minterms: ' + JSON.stringify(groups)); // デバッグ用ログ
+
+    // 隣接する最小項をマージ
+    let mergedGroups = {};
+    let hasMerged = true;
+    while (hasMerged) {
+        hasMerged = false;
+        mergedGroups = {};
+        logMessage('Starting new merge iteration'); // マージ処理の開始をログ出力
+        Object.keys(groups).forEach(group => {
+            groups[group].forEach(minterm => {
+                Object.keys(groups).forEach(nextGroup => {
+                    if (parseInt(nextGroup) === parseInt(group) + 1) {
+                        groups[nextGroup].forEach(nextMinterm => {
+                            const diff = minterm.split('').filter((bit, index) => bit !== nextMinterm[index]);
+                            if (diff.length === 1) {
+                                const mergedMinterm = minterm.split('').map((bit, index) => {
+                                    return bit === nextMinterm[index] ? bit : '-';
+                                }).join('');
+                                if (!mergedGroups[mergedMinterm]) mergedGroups[mergedMinterm] = [];
+                                mergedGroups[mergedMinterm].push(minterm, nextMinterm);
+                                hasMerged = true;
+                                logMessage(`Merged ${minterm} and ${nextMinterm} into ${mergedMinterm}`); // マージ結果をログ出力
+                            }
+                        });
+                    }
+                });
+            });
+        });
+        logMessage('Merged groups before update: ' + JSON.stringify(mergedGroups)); // 更新前のマージグループをログ出力
+        groups = mergedGroups;
+        logMessage('Merged groups after update: ' + JSON.stringify(groups)); // 更新後のマージグループをログ出力
+    }
+    logMessage('Finished merging iterations'); // マージ処理の終了をログ出力
+
+    // 必須主項を抽出
+    const essentialPrimeImplicants = [];
+    Object.keys(groups).forEach(group => {
+        groups[group].forEach(minterm => {
+            const isEssential = !Object.keys(groups).some(otherGroup => {
+                return groups[otherGroup].some(otherMinterm => {
+                    return otherMinterm !== minterm && otherMinterm.split('').every((bit, index) => {
+                        return bit === '-' || bit === minterm[index];
+                    });
+                });
+            });
+            if (isEssential) essentialPrimeImplicants.push(minterm);
+        });
+    });
+    logMessage('Essential prime implicants: ' + JSON.stringify(essentialPrimeImplicants)); // デバッグ用ログ
+
+    // 最小積和形に変換
+    const simplifiedFormula = essentialPrimeImplicants.map(minterm => {
+        return minterm.split('').map((bit, index) => {
+            return bit === '-' ? '' : (bit === '1' ? `A${index}` : `!A${index}`);
+        }).join('');
+    }).join(' + ');
+
+    logMessage('Simplified formula: ' + simplifiedFormula); // デバッグ用ログ
+    return simplifiedFormula;
+}
+
+
 
 // 数式を生成する関数
 function generateFormula() {
@@ -134,86 +218,11 @@ function generateFormula() {
 
     formula = formula.slice(0, -3); // 最後の " + " を削除
     logMessage('Generated formula: ' + formula); // デバッグ用ログ
-    logMessage('Bitstate array: ' + bitstateArray.join(', ')); // bitstate配列のログ
-    document.getElementById('formula').textContent = formula; // 数式を表示
-}
 
-// クワイン・マクラスキー法による論理式の簡略化
-function simplifyFormula(formula) {
-    logMessage('Original formula: ' + formula); // デバッグ用ログ
-
-    // 論理式をパースして最小項を抽出
-    const minterms = formula.split(' + ').map(term => {
-        return term.replace(/[()]/g, '').split(/(?=[A-Z])/).map(literal => {
-            return literal.startsWith('!') ? `0${literal.slice(1)}` : `1${literal}`;
-        });
-    });
-    logMessage('Parsed minterms: ' + JSON.stringify(minterms)); // デバッグ用ログ
-
-    // 最小項をグループ化
-    const groups = {};
-    minterms.forEach(minterm => {
-        const onesCount = minterm.filter(literal => literal.startsWith('1')).length;
-        if (!groups[onesCount]) groups[onesCount] = [];
-        groups[onesCount].push(minterm);
-    });
-    logMessage('Grouped minterms: ' + JSON.stringify(groups)); // デバッグ用ログ
-
-    // 隣接する最小項をマージ
-    let mergedGroups = {};
-    let hasMerged = true;
-    while (hasMerged) {
-        hasMerged = false;
-        mergedGroups = {};
-        Object.keys(groups).forEach(group => {
-            groups[group].forEach(minterm => {
-                Object.keys(groups).forEach(nextGroup => {
-                    if (parseInt(nextGroup) === parseInt(group) + 1) {
-                        groups[nextGroup].forEach(nextMinterm => {
-                            const diff = minterm.filter((literal, index) => literal !== nextMinterm[index]);
-                            if (diff.length === 1) {
-                                const mergedMinterm = minterm.map((literal, index) => {
-                                    return literal === nextMinterm[index] ? literal : '-';
-                                });
-                                const mergedKey = mergedMinterm.join('');
-                                if (!mergedGroups[mergedKey]) mergedGroups[mergedKey] = [];
-                                mergedGroups[mergedKey].push(minterm, nextMinterm);
-                                hasMerged = true;
-                            }
-                        });
-                    }
-                });
-            });
-        });
-        groups = mergedGroups;
-        logMessage('Merged groups: ' + JSON.stringify(groups)); // デバッグ用ログ
-    }
-
-    // 必須主項を抽出
-    const essentialPrimeImplicants = [];
-    Object.keys(groups).forEach(group => {
-        groups[group].forEach(minterm => {
-            const isEssential = !Object.keys(groups).some(otherGroup => {
-                return groups[otherGroup].some(otherMinterm => {
-                    return otherMinterm !== minterm && otherMinterm.every((literal, index) => {
-                        return literal === '-' || literal === minterm[index];
-                    });
-                });
-            });
-            if (isEssential) essentialPrimeImplicants.push(minterm);
-        });
-    });
-    logMessage('Essential prime implicants: ' + JSON.stringify(essentialPrimeImplicants)); // デバッグ用ログ
-
-    // 最小積和形に変換
-    const simplifiedFormula = essentialPrimeImplicants.map(minterm => {
-        return minterm.map(literal => {
-            return literal === '-' ? '' : (literal.startsWith('1') ? literal.slice(1) : `!${literal.slice(1)}`);
-        }).join('');
-    }).join(' + ');
-
+    // 簡略化された数式を生成
+    const simplifiedFormula = simplification(bitstateArray);
     logMessage('Simplified formula: ' + simplifiedFormula); // デバッグ用ログ
-    return simplifiedFormula;
+    document.getElementById('formula').textContent = simplifiedFormula; // 簡略化された数式を表示
 }
 
 // ページ読み込み時に真理値表を生成
