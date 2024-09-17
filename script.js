@@ -32,6 +32,11 @@ function renderTable(combinations, numElements) {
         tableHeader.appendChild(th);
     }
 
+    // 追加列のヘッダー
+    const extraTh = document.createElement('th');
+    extraTh.textContent = 'Extra';
+    tableHeader.appendChild(extraTh);
+
     // 行の作成
     combinations.forEach((combination, index) => {
         const tr = document.createElement('tr');
@@ -44,8 +49,23 @@ function renderTable(combinations, numElements) {
             td.setAttribute('contenteditable', 'true');
             tr.appendChild(td);
         });
+        // 追加列のセル
+        const extraTd = document.createElement('td');
+        extraTd.textContent = 'x';
+        extraTd.setAttribute('contenteditable', 'true');
+        extraTd.addEventListener('input', handleInput);
+        tr.appendChild(extraTd);
+
         tableBody.appendChild(tr);
     });
+}
+
+function handleInput(event) {
+    const validKeys = ['0', '1', 'x'];
+    const inputValue = event.target.textContent;
+    if (!validKeys.includes(inputValue)) {
+        event.target.textContent = 'x';
+    }
 }
 
 function sortTable(columnIndex) {
