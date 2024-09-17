@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>真理値表エディタ</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>真理値表エディタ</h1>
+    <table id="truthTable">
+        <thead>
+            <tr>
+                <th>要素</th>
+                <th>値</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- JavaScriptで行を追加 -->
+        </tbody>
+    </table>
+    <button onclick="generateExpression()">結果式を生成</button>
+    <div id="result"></div>
+
+    <script>
+        const truthTable = [
+            { element: 'A', value: true },
+            { element: 'B', value: false },
+            // 他の要素を追加
+        ];
+
+        function renderTable() {
+            const tbody = document.getElementById('truthTable').querySelector('tbody');
+            tbody.innerHTML = '';
+            truthTable.forEach(row => {
+                const tr = document.createElement('tr');
+                const tdElement = document.createElement('td');
+                tdElement.textContent = row.element;
+                const tdValue = document.createElement('td');
+                tdValue.textContent = row.value;
+                tr.appendChild(tdElement);
+                tr.appendChild(tdValue);
+                tbody.appendChild(tr);
+            });
+        }
+
+        function generateExpression() {
+            // 論理式生成のロジックをここに追加
+            const result = '生成された論理式';
+            document.getElementById('result').textContent = result;
+        }
+
+        renderTable();
+    </script>
+</body>
+</html>
