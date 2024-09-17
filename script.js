@@ -21,20 +21,23 @@ function generateCombinations(numElements) {
 function renderTable(combinations, numElements) {
     const tableHeader = document.getElementById('tableHeader');
     const tableBody = document.getElementById('tableBody');
-    tableHeader.innerHTML = '';
+    tableHeader.innerHTML = '<th>Index</th>';
     tableBody.innerHTML = '';
 
     // ヘッダーの作成
     for (let i = 0; i < numElements; i++) {
         const th = document.createElement('th');
         th.textContent = `Element ${i + 1}`;
-        th.setAttribute('onclick', `sortTable(${i})`);
+        th.setAttribute('onclick', `sortTable(${i + 1})`);
         tableHeader.appendChild(th);
     }
 
     // 行の作成
-    combinations.forEach(combination => {
+    combinations.forEach((combination, index) => {
         const tr = document.createElement('tr');
+        const indexTd = document.createElement('td');
+        indexTd.textContent = index;
+        tr.appendChild(indexTd);
         combination.forEach(value => {
             const td = document.createElement('td');
             td.textContent = value;
@@ -48,12 +51,13 @@ function renderTable(combinations, numElements) {
 function sortTable(columnIndex) {
     const table = document.getElementById('truthTable');
     const rows = Array.from(table.rows).slice(1);
-    rows.sort((a, b) => {
+    const tbody = table.tBodies[0];
+    const sortedRows = rows.sort((a, b) => {
         const cellA = a.cells[columnIndex].textContent;
         const cellB = b.cells[columnIndex].textContent;
         return cellA.localeCompare(cellB);
     });
-    rows.forEach(row => table.appendChild(row));
+    sortedRows.forEach(row => tbody.appendChild(row));
 }
 
 document.addEventListener('DOMContentLoaded', generateTruthTable);
