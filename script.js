@@ -86,12 +86,32 @@ function sortTable(columnIndex) {
     sortedRows.forEach(row => tbody.appendChild(row)); // ソートされた行を再配置
 }
 
+// ログを表示する関数
+function logMessage(message) {
+    const logDiv = document.getElementById('log');
+    const logEntry = document.createElement('div');
+    logEntry.textContent = message;
+    logDiv.appendChild(logEntry);
+}
+
+// bitstate配列を作成する関数
+function createBitstateArray(numElements) {
+    const arraySize = Math.pow(2, numElements);
+    const bitstateArray = new Array(arraySize).fill(0);
+    return bitstateArray;
+}
+
 // 数式を生成する関数
 function generateFormula() {
     const table = document.getElementById('truthTable');
+    if (!table) {
+        logMessage('Truth table element not found');
+        return;
+    }
     const rows = Array.from(table.rows).slice(1); // ヘッダーを除く行を取得
     const numElements = document.getElementById('numElements').value;
     let formula = '';
+    const bitstateArray = createBitstateArray(numElements);
 
     rows.forEach(row => {
         const cells = Array.from(row.cells);
@@ -101,44 +121,99 @@ function generateFormula() {
         }
         if (resultValue === '1') {
             let term = '';
-            cells.slice(1).forEach((cell, index) => { // Index列を除外
+            let index = 0;
+            cells.slice(1).forEach((cell, idx) => { // Index列を除外
                 const cellValue = cell.textContent;
-                term += (cellValue === '1') ? `A${index}` : `!A${index}`; // 入力に基づいて項を生成
+                term += (cellValue === '1') ? `A${idx}` : `!A${idx}`; // 入力に基づいて項を生成
+                index |= (cellValue === '1') ? (1 << idx) : 0; // インデックスを計算
             });
             formula += `(${term}) + `;
+            bitstateArray[index] = 1; // bitstate配列に結果を設定
         }
     });
 
     formula = formula.slice(0, -3); // 最後の " + " を削除
-    formula = simplifyFormula(formula); // 数式を最小積和形に変換
+    logMessage('Generated formula: ' + formula); // デバッグ用ログ
+    logMessage('Bitstate array: ' + bitstateArray.join(', ')); // bitstate配列のログ
     document.getElementById('formula').textContent = formula; // 数式を表示
 }
 
-// クワイン-マクラスキー法を用いて数式を最小積和形に変換する関数
+// クワイン・マクラスキー法による論理式の簡略化
 function simplifyFormula(formula) {
-    const terms = formula.split(' + ').map(term => term.replace(/[()]/g, ''));
-    const minterms = terms.map(term => {
-        return term.split('').map(char => (char === '!' ? 0 : 1));
-    });
+    logMessage('Original formula: ' + formula); // デバッグ用ログ
 
-    // クワイン-マクラスキー法の実装
-    const simplified = quineMcCluskey(minterms);
-    return simplified.map(term => {
-        return term.map((bit, index) => (bit === 1 ? `A${index}` : `!A${index}`)).join('');
+    // 論理式をパースして最小項を抽出
+    const minterms = formula.split(' + ').map(term => {
+        return term.replace(/[()]/g, '').split(/(?=[A-Z])/).map(literal => {
+            return literal.startsWith('!') ? `0${literal.slice(1)}` : `1${literal}`;
+        });
+    });
+    logMessage('Parsed minterms: ' + JSON.stringify(minterms)); // デバッグ用ログ
+
+    // 最小項をグループ化
+    const groups = {};
+    minterms.forEach(minterm => {
+        const onesCount = minterm.filter(literal => literal.startsWith('1')).length;
+        if (!groups[onesCount]) groups[onesCount] = [];
+        groups[onesCount].push(minterm);
+    });
+    logMessage('Grouped minterms: ' + JSON.stringify(groups)); // デバッグ用ログ
+
+    // 隣接する最小項をマージ
+    let mergedGroups = {};
+    let hasMerged = true;
+    while (hasMerged) {
+        hasMerged = false;
+        mergedGroups = {};
+        Object.keys(groups).forEach(group => {
+            groups[group].forEach(minterm => {
+                Object.keys(groups).forEach(nextGroup => {
+                    if (parseInt(nextGroup) === parseInt(group) + 1) {
+                        groups[nextGroup].forEach(nextMinterm => {
+                            const diff = minterm.filter((literal, index) => literal !== nextMinterm[index]);
+                            if (diff.length === 1) {
+                                const mergedMinterm = minterm.map((literal, index) => {
+                                    return literal === nextMinterm[index] ? literal : '-';
+                                });
+                                const mergedKey = mergedMinterm.join('');
+                                if (!mergedGroups[mergedKey]) mergedGroups[mergedKey] = [];
+                                mergedGroups[mergedKey].push(minterm, nextMinterm);
+                                hasMerged = true;
+                            }
+                        });
+                    }
+                });
+            });
+        });
+        groups = mergedGroups;
+        logMessage('Merged groups: ' + JSON.stringify(groups)); // デバッグ用ログ
+    }
+
+    // 必須主項を抽出
+    const essentialPrimeImplicants = [];
+    Object.keys(groups).forEach(group => {
+        groups[group].forEach(minterm => {
+            const isEssential = !Object.keys(groups).some(otherGroup => {
+                return groups[otherGroup].some(otherMinterm => {
+                    return otherMinterm !== minterm && otherMinterm.every((literal, index) => {
+                        return literal === '-' || literal === minterm[index];
+                    });
+                });
+            });
+            if (isEssential) essentialPrimeImplicants.push(minterm);
+        });
+    });
+    logMessage('Essential prime implicants: ' + JSON.stringify(essentialPrimeImplicants)); // デバッグ用ログ
+
+    // 最小積和形に変換
+    const simplifiedFormula = essentialPrimeImplicants.map(minterm => {
+        return minterm.map(literal => {
+            return literal === '-' ? '' : (literal.startsWith('1') ? literal.slice(1) : `!${literal.slice(1)}`);
+        }).join('');
     }).join(' + ');
-}
 
-// クワイン-マクラスキー法の実装
-function quineMcCluskey(minterms) {
-    // 簡略化のための基本的な実装
-    // 実際にはもっと複雑なロジックが必要
-    const simplified = [];
-    minterms.forEach(term => {
-        if (!simplified.some(simplifiedTerm => JSON.stringify(simplifiedTerm) === JSON.stringify(term))) {
-            simplified.push(term);
-        }
-    });
-    return simplified;
+    logMessage('Simplified formula: ' + simplifiedFormula); // デバッグ用ログ
+    return simplifiedFormula;
 }
 
 // ページ読み込み時に真理値表を生成
