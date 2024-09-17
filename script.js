@@ -183,6 +183,41 @@ function simplification(bitstateArray) {
     return simplifiedFormula;
 }
 
+// 数式を逆ポーランド記法に変換する関数
+function infixToRPN(formula) {
+    const precedence = {
+        '!': 3,
+        '*': 2,
+        '+': 1
+    };
+    const output = [];
+    const operators = [];
+    const tokens = formula.match(/A\d+|!A\d+|[()*+]/g);
+
+    tokens.forEach(token => {
+        if (/A\d+|!A\d+/.test(token)) {
+            output.push(token);
+        } else if (token === '(') {
+            operators.push(token);
+        } else if (token === ')') {
+            while (operators.length && operators[operators.length - 1] !== '(') {
+                output.push(operators.pop());
+            }
+            operators.pop();
+        } else {
+            while (operators.length && precedence[operators[operators.length - 1]] >= precedence[token]) {
+                output.push(operators.pop());
+            }
+            operators.push(token);
+        }
+    });
+
+    while (operators.length) {
+        output.push(operators.pop());
+    }
+
+    return output.join(' ');
+}
 
 
 // 数式を生成する関数
@@ -218,6 +253,9 @@ function generateFormula() {
 
     formula = formula.slice(0, -3); // 最後の " + " を削除
     logMessage('Generated formula: ' + formula); // デバッグ用ログ
+
+    const rpnFormula = infixToRPN(formula)
+    document.getElementById('formula').textContent = rpnFormula; // 逆ポーランド記法された数式を表示
 
     // 簡略化された数式を生成
     const simplifiedFormula = simplification(bitstateArray);
