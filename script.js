@@ -1,26 +1,52 @@
 // script.js
-let tableData = [
-    { element: 'A', value: '1' },
-    { element: 'B', value: '0' }
-];
+function generateTruthTable() {
+    const numElements = document.getElementById('numElements').value;
+    const combinations = generateCombinations(numElements);
+    renderTable(combinations, numElements);
+}
 
-function renderTable() {
-    const tbody = document.querySelector('#sortableTable tbody');
-    tbody.innerHTML = '';
-    tableData.forEach((row, rowIndex) => {
+function generateCombinations(numElements) {
+    const combinations = [];
+    const rows = Math.pow(2, numElements);
+    for (let i = 0; i < rows; i++) {
+        const combination = [];
+        for (let j = numElements - 1; j >= 0; j--) {
+            combination.push((i & (1 << j)) ? '1' : '0');
+        }
+        combinations.push(combination);
+    }
+    return combinations;
+}
+
+function renderTable(combinations, numElements) {
+    const tableHeader = document.getElementById('tableHeader');
+    const tableBody = document.getElementById('tableBody');
+    tableHeader.innerHTML = '';
+    tableBody.innerHTML = '';
+
+    // ヘッダーの作成
+    for (let i = 0; i < numElements; i++) {
+        const th = document.createElement('th');
+        th.textContent = `Element ${i + 1}`;
+        th.setAttribute('onclick', `sortTable(${i})`);
+        tableHeader.appendChild(th);
+    }
+
+    // 行の作成
+    combinations.forEach(combination => {
         const tr = document.createElement('tr');
-        Object.values(row).forEach((cellData, colIndex) => {
+        combination.forEach(value => {
             const td = document.createElement('td');
-            td.textContent = cellData;
+            td.textContent = value;
             td.setAttribute('contenteditable', 'true');
             tr.appendChild(td);
         });
-        tbody.appendChild(tr);
+        tableBody.appendChild(tr);
     });
 }
 
 function sortTable(columnIndex) {
-    const table = document.getElementById('sortableTable');
+    const table = document.getElementById('truthTable');
     const rows = Array.from(table.rows).slice(1);
     rows.sort((a, b) => {
         const cellA = a.cells[columnIndex].textContent;
@@ -30,44 +56,4 @@ function sortTable(columnIndex) {
     rows.forEach(row => table.appendChild(row));
 }
 
-function addRow() {
-    tableData.push({ element: 'New', value: 'x' });
-    renderTable();
-}
-
-function deleteRow() {
-    tableData.pop();
-    renderTable();
-}
-
-function addColumn() {
-    const newColumn = prompt("Enter the name of the new column:");
-    if (newColumn) {
-        tableData.forEach(row => row[newColumn] = 'x');
-        const th = document.createElement('th');
-        th.textContent = newColumn;
-        th.setAttribute('onclick', `sortTable(${Object.keys(tableData[0]).length - 1})`);
-        document.querySelector('#sortableTable thead tr').appendChild(th);
-        renderTable();
-    }
-}
-
-function deleteColumn() {
-    const columnToDelete = prompt("Enter the name of the column to delete:");
-    if (columnToDelete) {
-        tableData.forEach(row => delete row[columnToDelete]);
-        const ths = document.querySelectorAll('#sortableTable th');
-        ths.forEach((th, index) => {
-            if (th.textContent === columnToDelete) {
-                th.remove();
-                tableData.forEach(row => {
-                    const cells = document.querySelectorAll(`#sortableTable tbody tr td:nth-child(${index + 1})`);
-                    cells.forEach(cell => cell.remove());
-                });
-            }
-        });
-        renderTable();
-    }
-}
-
-document.addEventListener('DOMContentLoaded', renderTable);
+document.addEventListener('DOMContentLoaded', generateTruthTable);
