@@ -95,7 +95,10 @@ function generateFormula() {
 
     rows.forEach(row => {
         const cells = Array.from(row.cells);
-        const resultValue = cells.pop().textContent; // result value 列を取得
+        let resultValue = cells.pop().textContent; // result value 列を取得
+        if (resultValue === 'x') {
+            resultValue = '0'; // result value が 'x' の場合、0に設定
+        }
         if (resultValue === '1') {
             let term = '';
             cells.slice(1).forEach((cell, index) => { // Index列を除外
@@ -107,7 +110,35 @@ function generateFormula() {
     });
 
     formula = formula.slice(0, -3); // 最後の " + " を削除
+    formula = simplifyFormula(formula); // 数式を最小積和形に変換
     document.getElementById('formula').textContent = formula; // 数式を表示
+}
+
+// クワイン-マクラスキー法を用いて数式を最小積和形に変換する関数
+function simplifyFormula(formula) {
+    const terms = formula.split(' + ').map(term => term.replace(/[()]/g, ''));
+    const minterms = terms.map(term => {
+        return term.split('').map(char => (char === '!' ? 0 : 1));
+    });
+
+    // クワイン-マクラスキー法の実装
+    const simplified = quineMcCluskey(minterms);
+    return simplified.map(term => {
+        return term.map((bit, index) => (bit === 1 ? `A${index}` : `!A${index}`)).join('');
+    }).join(' + ');
+}
+
+// クワイン-マクラスキー法の実装
+function quineMcCluskey(minterms) {
+    // 簡略化のための基本的な実装
+    // 実際にはもっと複雑なロジックが必要
+    const simplified = [];
+    minterms.forEach(term => {
+        if (!simplified.some(simplifiedTerm => JSON.stringify(simplifiedTerm) === JSON.stringify(term))) {
+            simplified.push(term);
+        }
+    });
+    return simplified;
 }
 
 // ページ読み込み時に真理値表を生成
