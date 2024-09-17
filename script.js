@@ -91,7 +91,7 @@ function generateFormula() {
         const resultValue = cells.pop().textContent;
         if (resultValue === '1') {
             let term = '';
-            cells.forEach((cell, index) => {
+            cells.slice(1).forEach((cell, index) => { // Index列を除外
                 const cellValue = cell.textContent;
                 term += (cellValue === '1') ? `A${index}` : `!A${index}`;
             });
