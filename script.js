@@ -187,30 +187,39 @@ function simplification(bitstateArray) {
 // 数式を逆ポーランド記法に変換する関数
 // 引数はformula。例えば、(A0!A1) + (A0A1)　のような形式
 // 戻り値は変換後の数式
+// !は項の一部として扱う
 function infixToRPN(formula) {
     const precedence = {
-        '!': 3,
         '*': 2,
         '+': 1,
     };
     const stack = [];
     let rpnFormula = '';
-    for (let i = 0; i < formula.length; i++) {
+    let i = 0;
+    while (i < formula.length) {
         const char = formula[i];
         if (char === '(') {
             stack.push(char);
+            i++;
         } else if (char === ')') {
             while (stack.length && stack[stack.length - 1] !== '(') {
                 rpnFormula += stack.pop() + ' ';
             }
             stack.pop();
-        } else if (precedence[char]) {
+            i++;
+        } else if (char === '*' || char === '+') {
             while (stack.length && precedence[stack[stack.length - 1]] >= precedence[char]) {
                 rpnFormula += stack.pop() + ' ';
             }
             stack.push(char);
+            i++;
         } else {
-            rpnFormula += char + ' ';
+            let operand = '';
+            while (i < formula.length && /[A-Za-z0-9!]/.test(formula[i])) {
+                operand += formula[i];
+                i++;
+            }
+            rpnFormula += operand + ' ';
         }
     }
     while (stack.length) {
