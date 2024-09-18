@@ -256,7 +256,9 @@ function generateFormula() {
     logMessage('Generated formula: ' + formula); // デバッグ用ログ
 
     const rpnFormula = infixToRPN(formula)
-    document.getElementById('formula').textContent = rpnFormula; // 逆ポーランド記法された数式を表示
+    logMessage('Generated rpnformula: ' + rpnFormula); // デバッグ用ログ
+
+    //document.getElementById('formula').textContent = rpnFormula; // 逆ポーランド記法された数式を表示
 }
 
 // ページ読み込み時に真理値表を生成
