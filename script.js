@@ -190,14 +190,14 @@ function simplification(bitstateArray) {
 function infixToRPN(formula) {
     const precedence = {
         '!': 3,
-        '+': 1,
-        '.': 2,
+        '+': 2,
+        '.': 1,
     };
     const stack = [];
     let rpnFormula = '';
-    let previousToken = '';
-
-    formula.split('').forEach(token => {
+    for (let i = 0; i < formula.length; i++) {
+        const token = formula[i];
+        if (token === ' ') continue;
         if (token === '(') {
             stack.push(token);
         } else if (token === ')') {
@@ -206,26 +206,19 @@ function infixToRPN(formula) {
             }
             stack.pop();
         } else if (token in precedence) {
-            while (stack.length && precedence[token] <= precedence[stack[stack.length - 1]]) {
+            while (stack.length && precedence[stack[stack.length - 1]] >= precedence[token]) {
                 rpnFormula += stack.pop();
             }
             stack.push(token);
         } else {
-            if (previousToken && !('!+.'.includes(previousToken)) && !('!+.'.includes(token))) {
-                rpnFormula += '.';
-            }
             rpnFormula += token;
         }
-        previousToken = token;
-    });
-
+    }
     while (stack.length) {
         rpnFormula += stack.pop();
     }
-
     return rpnFormula;
 }
-
 
 
 // 数式を生成する関数
