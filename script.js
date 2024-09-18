@@ -104,7 +104,7 @@ function createBitstateArray(numElements) {
 // クワイン・マクラスキー法による論理式の簡略化
 //参考サイトhttps://shibaken-8128.hatenablog.com/entry/2021/12/01/110905
 function simplification(bitstateArray) {
-    logMessage('Original bitstate array: ' + bitstateArray.join(', ')); // デバッグ用ログ
+    // logMessage('Original bitstate array: ' + bitstateArray.join(', ')); // デバッグ用ログ
 
     // 最小項を抽出
     const minterms = [];
@@ -113,7 +113,7 @@ function simplification(bitstateArray) {
             minterms.push(index.toString(2).padStart(bitstateArray.length.toString(2).length, '0'));
         }
     });
-    logMessage('Minterms: ' + JSON.stringify(minterms)); // デバッグ用ログ
+    // logMessage('Minterms: ' + JSON.stringify(minterms)); // デバッグ用ログ
 
     // 最小項をグループ化
     const groups = {};
@@ -122,7 +122,7 @@ function simplification(bitstateArray) {
         if (!groups[onesCount]) groups[onesCount] = [];
         groups[onesCount].push(minterm);
     });
-    logMessage('Grouped minterms: ' + JSON.stringify(groups)); // デバッグ用ログ
+    // logMessage('Grouped minterms: ' + JSON.stringify(groups)); // デバッグ用ログ
 
     // 隣接する最小項をマージ
     let mergedGroups = {};
@@ -130,7 +130,7 @@ function simplification(bitstateArray) {
     while (hasMerged) {
         hasMerged = false;
         mergedGroups = {};
-        logMessage('Starting new merge iteration'); // マージ処理の開始をログ出力
+        // logMessage('Starting new merge iteration'); // マージ処理の開始をログ出力
         Object.keys(groups).forEach(group => {
             groups[group].forEach(minterm => {
                 Object.keys(groups).forEach(nextGroup => {
@@ -144,18 +144,18 @@ function simplification(bitstateArray) {
                                 if (!mergedGroups[mergedMinterm]) mergedGroups[mergedMinterm] = [];
                                 mergedGroups[mergedMinterm].push(minterm, nextMinterm);
                                 hasMerged = true;
-                                logMessage(`Merged ${minterm} and ${nextMinterm} into ${mergedMinterm}`); // マージ結果をログ出力
+                                // logMessage(`Merged ${minterm} and ${nextMinterm} into ${mergedMinterm}`); // マージ結果をログ出力
                             }
                         });
                     }
                 });
             });
         });
-        logMessage('Merged groups before update: ' + JSON.stringify(mergedGroups)); // 更新前のマージグループをログ出力
+        // logMessage('Merged groups before update: ' + JSON.stringify(mergedGroups)); // 更新前のマージグループをログ出力
         groups = mergedGroups;
-        logMessage('Merged groups after update: ' + JSON.stringify(groups)); // 更新後のマージグループをログ出力
+        // logMessage('Merged groups after update: ' + JSON.stringify(groups)); // 更新後のマージグループをログ出力
     }
-    logMessage('Finished merging iterations'); // マージ処理の終了をログ出力
+    // logMessage('Finished merging iterations'); // マージ処理の終了をログ出力
 
     // 必須主項を抽出
     const essentialPrimeImplicants = [];
@@ -187,45 +187,43 @@ function simplification(bitstateArray) {
 // 数式を逆ポーランド記法に変換する関数
 // 引数はformula。例えば、(A0!A1) + (A0A1)　のような形式
 // 戻り値は変換後の数式
-// !は項の一部として扱う
 function infixToRPN(formula) {
     const precedence = {
-        '*': 2,
+        '!': 3,
         '+': 1,
+        '.': 2,
     };
     const stack = [];
     let rpnFormula = '';
-    let i = 0;
-    while (i < formula.length) {
-        const char = formula[i];
-        if (char === '(') {
-            stack.push(char);
-            i++;
-        } else if (char === ')') {
-            while (stack.length && stack[stack.length - 1] !== '(') {
-                rpnFormula += stack.pop() + ' ';
+    let previousToken = '';
+
+    formula.split('').forEach(token => {
+        if (token === '(') {
+            stack.push(token);
+        } else if (token === ')') {
+            while (stack[stack.length - 1] !== '(') {
+                rpnFormula += stack.pop();
             }
             stack.pop();
-            i++;
-        } else if (char === '*' || char === '+') {
-            while (stack.length && precedence[stack[stack.length - 1]] >= precedence[char]) {
-                rpnFormula += stack.pop() + ' ';
+        } else if (token in precedence) {
+            while (stack.length && precedence[token] <= precedence[stack[stack.length - 1]]) {
+                rpnFormula += stack.pop();
             }
-            stack.push(char);
-            i++;
+            stack.push(token);
         } else {
-            let operand = '';
-            while (i < formula.length && /[A-Za-z0-9!]/.test(formula[i])) {
-                operand += formula[i];
-                i++;
+            if (previousToken && !('!+.'.includes(previousToken)) && !('!+.'.includes(token))) {
+                rpnFormula += '.';
             }
-            rpnFormula += operand + ' ';
+            rpnFormula += token;
         }
-    }
+        previousToken = token;
+    });
+
     while (stack.length) {
-        rpnFormula += stack.pop() + ' ';
+        rpnFormula += stack.pop();
     }
-    return rpnFormula.trim();
+
+    return rpnFormula;
 }
 
 
