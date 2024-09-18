@@ -101,125 +101,233 @@ function createBitstateArray(numElements) {
     return bitstateArray;
 }
 
-// クワイン・マクラスキー法による論理式の簡略化
-//参考サイトhttps://shibaken-8128.hatenablog.com/entry/2021/12/01/110905
-function simplification(bitstateArray) {
-    // logMessage('Original bitstate array: ' + bitstateArray.join(', ')); // デバッグ用ログ
 
-    // 最小項を抽出
-    const minterms = [];
-    bitstateArray.forEach((value, index) => {
-        if (value === 1) {
-            minterms.push(index.toString(2).padStart(bitstateArray.length.toString(2).length, '0'));
+function simplifyFormulaByQuineMcCluskeyAlgorithm(formula) {
+    const terms = formula.split(' + ').map(term => term.split('・').map(literal => {
+        const negated = literal.startsWith('!');
+        return {
+            variable: literal.replace('!', ''),
+            negated
+        };
+    }));
+
+    const numVariables = terms[0].length;
+    const primeImplicants = [];
+    const table = new Map();
+
+    terms.forEach(term => {
+        const binary = term.map(({ variable, negated }) => {
+            const index = parseInt(variable.replace('A', ''));
+            return negated ? 0 : (1 << (numVariables - 1 - index));
+        }).reduce((acc, val) => acc | val, 0);
+
+        if (!table.has(binary)) {
+            table.set(binary, 0);
         }
+        table.set(binary, table.get(binary) + 1);
     });
-    // logMessage('Minterms: ' + JSON.stringify(minterms)); // デバッグ用ログ
 
-    // 最小項をグループ化
-    const groups = {};
-    minterms.forEach(minterm => {
-        const onesCount = minterm.split('1').length - 1;
-        if (!groups[onesCount]) groups[onesCount] = [];
-        groups[onesCount].push(minterm);
+    const sortedTable = Array.from(table.keys()).sort((a, b) => table.get(a) - table.get(b));
+    const column = Array.from({ length: numVariables + 1 }, () => new Set());
+
+    sortedTable.forEach((key, index) => {
+        const binary = key.toString(2).padStart(numVariables, '0');
+        const count = table.get(key);
+        const primeImplicant = {
+            binary,
+            count
+        };
+        primeImplicants.push(primeImplicant);
+
+        for (let i = 0; i < numVariables; i++) {
+            if (binary[i] === '1') {
+                column[i].add(primeImplicant);
+            }
+        }
+        column[numVariables].add(primeImplicant);
     });
-    // logMessage('Grouped minterms: ' + JSON.stringify(groups)); // デバッグ用ログ
 
-    // 隣接する最小項をマージ
-    let mergedGroups = {};
-    let hasMerged = true;
-    while (hasMerged) {
-        hasMerged = false;
-        mergedGroups = {};
-        // logMessage('Starting new merge iteration'); // マージ処理の開始をログ出力
-        Object.keys(groups).forEach(group => {
-            groups[group].forEach(minterm => {
-                Object.keys(groups).forEach(nextGroup => {
-                    if (parseInt(nextGroup) === parseInt(group) + 1) {
-                        groups[nextGroup].forEach(nextMinterm => {
-                            const diff = minterm.split('').filter((bit, index) => bit !== nextMinterm[index]);
-                            if (diff.length === 1) {
-                                const mergedMinterm = minterm.split('').map((bit, index) => {
-                                    return bit === nextMinterm[index] ? bit : '-';
-                                }).join('');
-                                if (!mergedGroups[mergedMinterm]) mergedGroups[mergedMinterm] = [];
-                                mergedGroups[mergedMinterm].push(minterm, nextMinterm);
-                                hasMerged = true;
-                                // logMessage(`Merged ${minterm} and ${nextMinterm} into ${mergedMinterm}`); // マージ結果をログ出力
-                            }
-                        });
+    const essentialPrimeImplicants = new Set();
+    const coveredTerms = new Set();
+
+    for (let i = 0; i < numVariables; i++) {
+        const currentColumn = column[i];
+        const nextColumn = column[i + 1];
+        const remainingTerms = new Set();
+
+        currentColumn.forEach(primeImplicant => {
+            if (primeImplicant.count === 1) {
+                essentialPrimeImplicants.add(primeImplicant);
+                primeImplicant.covered = true;
+                const binary = primeImplicant.binary;
+                terms.forEach((term, index) => {
+                    const termBinary = term.map(({ variable, negated }) => {
+                        const idx = parseInt(variable.replace('A', ''));
+                        return negated ? 0 : (1 << (numVariables - 1 - idx));
+                    }).reduce((acc, val) => acc | val, 0);
+                    if (binary === termBinary) {
+                        coveredTerms.add(index);
                     }
                 });
-            });
+            } else {
+                remainingTerms.add(primeImplicant);
+            }
         });
-        // logMessage('Merged groups before update: ' + JSON.stringify(mergedGroups)); // 更新前のマージグループをログ出力
-        groups = mergedGroups;
-        // logMessage('Merged groups after update: ' + JSON.stringify(groups)); // 更新後のマージグループをログ出力
+
+        column[i + 1] = remainingTerms;
     }
-    // logMessage('Finished merging iterations'); // マージ処理の終了をログ出力
 
-    // 必須主項を抽出
-    const essentialPrimeImplicants = [];
-    Object.keys(groups).forEach(group => {
-        groups[group].forEach(minterm => {
-            const isEssential = !Object.keys(groups).some(otherGroup => {
-                return groups[otherGroup].some(otherMinterm => {
-                    return otherMinterm !== minterm && otherMinterm.split('').every((bit, index) => {
-                        return bit === '-' || bit === minterm[index];
-                    });
-                });
-            });
-            if (isEssential) essentialPrimeImplicants.push(minterm);
-        });
+    let simplifiedFormula = '';
+
+    essentialPrimeImplicants.forEach(primeImplicant => {
+        const binary = primeImplicant.binary;
+        const term = binary.split('').map((bit, index) => {
+            const variable = `A${numVariables - 1 - index}`;
+            return bit === '1' ? variable : `!${variable}`;
+        }).join('・');
+        simplifiedFormula += `(${term}) + `;
     });
-    logMessage('Essential prime implicants: ' + JSON.stringify(essentialPrimeImplicants)); // デバッグ用ログ
 
-    // 最小積和形に変換
-    const simplifiedFormula = essentialPrimeImplicants.map(minterm => {
-        return minterm.split('').map((bit, index) => {
-            return bit === '-' ? '' : (bit === '1' ? `A${index}` : `!A${index}`);
-        }).join('');
-    }).join(' + ');
-
-    logMessage('Simplified formula: ' + simplifiedFormula); // デバッグ用ログ
+    simplifiedFormula = simplifiedFormula.slice(0, -3); // 最後の " + " を削除
     return simplifiedFormula;
 }
 
+
+
+// 以下のような論理式をクワイン・マクラスキー法により簡略化する関数
+// 引数はformula。例えば、 (!A0・!A1・A2) + (!A0・A1・A2) + (A0・!A1・!A2) + (A0・!A1・A2)　のような形式
+// 戻り値は簡略化された数式
+function simplifyFormulaByQuineMcCluskeyAlgorithm2(formula) {
+    const terms = formula.split(' + ').map(term => term.split('・').map(literal => {
+        const negated = literal.startsWith('!');
+        return {
+            variable: literal.replace('!', ''),
+            negated
+        };
+    }));
+
+    const numVariables = terms[0].length;
+    const primeImplicants = [];
+    const table = new Map();
+
+    terms.forEach(term => {
+        const binary = term.map(({ variable, negated }) => {
+            const index = parseInt(variable.replace('A', ''));
+            return negated ? 0 : (1 << index);
+        }).reduce((acc, val) => acc | val, 0);
+
+        if (!table.has(binary)) {
+            table.set(binary, 0);
+        }
+        table.set(binary, table.get(binary) + 1);
+    });
+
+    const sortedTable = Array.from(table.keys()).sort((a, b) => table.get(a) - table.get(b));
+    const column = Array.from({ length: numVariables + 1 }, () => new Set());
+
+    sortedTable.forEach((key, index) => {
+        const binary = key.toString(2).padStart(numVariables, '0');
+        const count = table.get(key);
+        const primeImplicant = {
+            binary,
+            count
+        };
+        primeImplicants.push(primeImplicant);
+
+        for (let i = 0; i < numVariables; i++) {
+            if (binary[i] === '1') {
+                column[i].add(primeImplicant);
+            }
+        }
+        column[numVariables].add(primeImplicant);
+    });
+
+    const essentialPrimeImplicants = new Set();
+    const coveredTerms = new Set();
+
+    for (let i = 0; i < numVariables; i++) {
+        const currentColumn = column[i];
+        const nextColumn = column[i + 1];
+        const remainingTerms = new Set();
+
+        currentColumn.forEach(primeImplicant => {
+            if (primeImplicant.count === 1) {
+                essentialPrimeImplicants.add(primeImplicant);
+                primeImplicant.covered = true;
+                const binary = primeImplicant.binary;
+                terms.forEach((term, index) => {
+                    const termBinary = term.map(({ variable, negated }) => {
+                        const idx = parseInt(variable.replace('A', ''));
+                        return negated ? 0 : (1 << idx);
+                    }).reduce((acc, val) => acc | val, 0);
+                    if (binary === termBinary) {
+                        coveredTerms.add(index);
+                    }
+                });
+            } else {
+                remainingTerms.add(primeImplicant);
+            }
+        });
+
+        column[i + 1] = remainingTerms;
+    }
+
+    essentialPrimeImplicants.forEach(primeImplicant => {
+        const binary = primeImplicant.binary;
+        const term = binary.split('').map((bit, index) => {
+            const variable = `A${index}`;
+            return bit === '1' ? variable : `!${variable}`;
+        }).join('・');
+        formula += `(${term}) + `;
+    });
+
+    formula = formula.slice(0, -3); // 最後の " + " を削除
+    return formula;
+}
+
 // 数式を逆ポーランド記法に変換する関数
-// 引数はformula。例えば、(A0!A1) + (A0A1)　のような形式
+// 引数はformula。例えば、 (!A0・!A1・A2) + (!A0・A1・A2) + (A0・!A1・!A2) + (A0・!A1・A2)　のような形式
 // 戻り値は変換後の数式
 function infixToRPN(formula) {
     const precedence = {
         '!': 3,
-        '+': 2,
-        '.': 1,
+        '・': 2,
+        '+': 1
     };
-    const stack = [];
-    let rpnFormula = '';
-    for (let i = 0; i < formula.length; i++) {
-        const token = formula[i];
-        if (token === ' ') continue;
+
+    const operators = [];
+    const output = [];
+
+    formula.split(' ').forEach(token => {
         if (token === '(') {
-            stack.push(token);
+            operators.push(token);
         } else if (token === ')') {
-            while (stack[stack.length - 1] !== '(') {
-                rpnFormula += stack.pop();
+            while (operators[operators.length - 1] !== '(') {
+                output.push(operators.pop());
             }
-            stack.pop();
+            operators.pop();
         } else if (token in precedence) {
-            while (stack.length && precedence[stack[stack.length - 1]] >= precedence[token]) {
-                rpnFormula += stack.pop();
+            while (operators.length && precedence[operators[operators.length - 1]] >= precedence[token]) {
+                output.push(operators.pop());
             }
-            stack.push(token);
+            operators.push(token);
         } else {
-            rpnFormula += token;
+            output.push(token);
         }
+    });
+
+    while (operators.length) {
+        output.push(operators.pop());
     }
-    while (stack.length) {
-        rpnFormula += stack.pop();
-    }
-    return rpnFormula;
+
+    return output.join(' ');
 }
 
+// 数式を以下の規則に従って成形する関数
+// (を｛に、)を｝に、+をORに、・をANDに変換する
+function formatFormula(formula) {
+    return formula.replace(/\(/g, '{').replace(/\)/g, '}').replace(/\+/g, ' OR ').replace(/・/g, ' AND ');
+}
 
 // 数式を生成する関数
 function generateFormula() {
@@ -244,9 +352,11 @@ function generateFormula() {
             let index = 0;
             cells.slice(1).forEach((cell, idx) => { // Index列を除外
                 const cellValue = cell.textContent;
-                term += (cellValue === '1') ? `A${idx}` : `!A${idx}`; // 入力に基づいて項を生成
+                term += (cellValue === '1') ? `A${idx}` : `!A${idx}`;
+                term += '・'; // AND演算子として「・」を追加
                 index |= (cellValue === '1') ? (1 << idx) : 0; // インデックスを計算
             });
+            term = term.slice(0, -1); // 最後の「・」を削除
             formula += `(${term}) + `;
             bitstateArray[index] = 1; // bitstate配列に結果を設定
         }
@@ -255,8 +365,14 @@ function generateFormula() {
     formula = formula.slice(0, -3); // 最後の " + " を削除
     logMessage('Generated formula: ' + formula); // デバッグ用ログ
 
-    const rpnFormula = infixToRPN(formula)
+    const simplifiedFormulaFormula = simplifyFormulaByQuineMcCluskeyAlgorithm(formula);
+    logMessage('Generated simpleFormula: ' + simplifiedFormulaFormula); // デバッグ用ログ
+
+    const rpnFormula = infixToRPN(simplifiedFormulaFormula)
     logMessage('Generated rpnformula: ' + rpnFormula); // デバッグ用ログ
+
+    formattedFormula = formatFormula(rpnFormula);
+    logMessage('Formatted formula: ' + formattedFormula); // デバッグ用ログ
 
     //document.getElementById('formula').textContent = rpnFormula; // 逆ポーランド記法された数式を表示
 }
