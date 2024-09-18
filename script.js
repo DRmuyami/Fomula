@@ -85,6 +85,7 @@ function sortTable(columnIndex) {
     });
     sortedRows.forEach(row => tbody.appendChild(row)); // ソートされた行を再配置
 }
+
 // ログを表示する関数
 function logMessage(message) {
     const logDiv = document.getElementById('log');
@@ -256,11 +257,6 @@ function generateFormula() {
 
     const rpnFormula = infixToRPN(formula)
     document.getElementById('formula').textContent = rpnFormula; // 逆ポーランド記法された数式を表示
-
-    // 簡略化された数式を生成
-    const simplifiedFormula = simplification(bitstateArray);
-    logMessage('Simplified formula: ' + simplifiedFormula); // デバッグ用ログ
-    document.getElementById('formula').textContent = simplifiedFormula; // 簡略化された数式を表示
 }
 
 // ページ読み込み時に真理値表を生成
