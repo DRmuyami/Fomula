@@ -184,40 +184,40 @@ function simplification(bitstateArray) {
 }
 
 // 数式を逆ポーランド記法に変換する関数
+// 引数はformula。例えば、(A0!A1) + (A0A1)　のような形式
+// 戻り値は変換後の数式
 function infixToRPN(formula) {
     const precedence = {
         '!': 3,
         '*': 2,
-        '+': 1
+        '+': 1,
     };
-    const output = [];
-    const operators = [];
-    const tokens = formula.match(/A\d+|!A\d+|[()*+]/g);
-
-    tokens.forEach(token => {
-        if (/A\d+|!A\d+/.test(token)) {
-            output.push(token);
-        } else if (token === '(') {
-            operators.push(token);
-        } else if (token === ')') {
-            while (operators.length && operators[operators.length - 1] !== '(') {
-                output.push(operators.pop());
+    const stack = [];
+    let rpnFormula = '';
+    for (let i = 0; i < formula.length; i++) {
+        const char = formula[i];
+        if (char === '(') {
+            stack.push(char);
+        } else if (char === ')') {
+            while (stack.length && stack[stack.length - 1] !== '(') {
+                rpnFormula += stack.pop() + ' ';
             }
-            operators.pop();
+            stack.pop();
+        } else if (precedence[char]) {
+            while (stack.length && precedence[stack[stack.length - 1]] >= precedence[char]) {
+                rpnFormula += stack.pop() + ' ';
+            }
+            stack.push(char);
         } else {
-            while (operators.length && precedence[operators[operators.length - 1]] >= precedence[token]) {
-                output.push(operators.pop());
-            }
-            operators.push(token);
+            rpnFormula += char + ' ';
         }
-    });
-
-    while (operators.length) {
-        output.push(operators.pop());
     }
-
-    return output.join(' ');
+    while (stack.length) {
+        rpnFormula += stack.pop() + ' ';
+    }
+    return rpnFormula.trim();
 }
+
 
 
 // 数式を生成する関数
